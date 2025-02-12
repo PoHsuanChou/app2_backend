@@ -5,6 +5,7 @@ import org.example.dto.RegisterUserReq;
 import org.example.entity.Profile;
 import org.example.entity.User;
 import org.example.exception.UserAlreadyExistsException;
+import org.example.exception.UserNotFoundException;
 import org.example.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,5 +44,9 @@ public class UserService {
                 .build();
 
         return userRepository.save(newUser);
+    }
+    public User getUserData(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 }

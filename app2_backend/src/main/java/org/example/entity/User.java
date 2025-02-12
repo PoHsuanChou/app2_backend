@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
+import java.util.List;
 
 @Document(collection = "users")
 @Data
@@ -31,4 +32,5 @@ public class User {
     private Date lastActive;
     private Date createdAt;
     private boolean isOnline;
+    private List<Role> roles;  // Roles list
 }
