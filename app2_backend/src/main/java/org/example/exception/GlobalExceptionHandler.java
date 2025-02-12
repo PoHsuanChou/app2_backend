@@ -20,31 +20,24 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex) {
-        Map<String, String> errors = ex.getConstraintViolations().stream()
-                .collect(Collectors.toMap(
-                        violation -> String.valueOf(violation.getPropertyPath()),
-                        ConstraintViolation::getMessage
-                ));
-
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Validation Failed", errors);
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFoundException(UserNotFoundException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage(),
+                "The requested user could not be found"
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = ex.getBindingResult().getFieldErrors().stream()
-                .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Validation Failed", errors);
-    }
-
-    @ExceptionHandler(CustomExceptions.BaseException.class)
-    public ResponseEntity<ErrorResponse> handleBaseException(CustomExceptions.BaseException ex) {
-        return buildErrorResponse(HttpStatus.valueOf(ex.getErrorCode()), ex.getMessage(), null);
-    }
-
-    private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status, String message, Map<String, String> errors) {
-        return ResponseEntity.status(status).body(new ErrorResponse(status, message, errors));
+    // Handle general runtime exceptions
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "An unexpected error occurred",
+                ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

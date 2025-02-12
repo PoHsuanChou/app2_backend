@@ -13,7 +13,7 @@ import java.util.Map;
 @NoArgsConstructor
 @Builder
 public class ErrorResponse {
-    private HttpStatus status;
+    private int code;
     private String message;
-    private Map<String,String> errors;
+    private String details;
 }

@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.RegisterUserReq;
 import org.example.entity.User;
-import org.example.exception.CustomExceptions;
+import org.example.exception.UserNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +22,7 @@ public class loginController {
 
 
 
-            throw new CustomExceptions.UserNotFoundException("User not found");
+            throw new UserNotFoundException("User not found");
 //        return null;
     }
 }
