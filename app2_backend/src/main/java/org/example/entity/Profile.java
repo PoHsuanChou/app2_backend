@@ -1,6 +1,8 @@
 package org.example.entity;
 
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
@@ -10,8 +12,10 @@ import java.util.Date;
 import java.util.List;
 
 @Document(collection = "profiles")
+@Builder
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class Profile {
     @Id
     private String id;

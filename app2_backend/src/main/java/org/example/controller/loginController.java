@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.dto.RegisterUserReq;
 import org.example.entity.User;
 import org.example.exception.UserNotFoundException;
+import org.example.service.UserService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,13 +18,14 @@ import java.util.List;
 @Slf4j
 public class loginController {
 
+    private final UserService userService;
+
+
     @PostMapping("register")
-    public List<User> getAllUsers(@Valid @RequestBody RegisterUserReq registerUserReq ) {
-        log.info("enter registUser and request is registerUserReq={}",registerUserReq);
-
-
-
-            throw new UserNotFoundException("User not found");
+    public ResponseEntity<User> getAllUsers(@Valid @RequestBody RegisterUserReq registerUserReq ) {
+        log.info("Entering registerUser with request: {}", registerUserReq);
+        User createdUser = userService.registerUser(registerUserReq);
+        return ResponseEntity.ok(createdUser);
 //        return null;
     }
 }

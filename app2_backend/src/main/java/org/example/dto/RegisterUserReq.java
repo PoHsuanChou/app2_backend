@@ -11,13 +11,13 @@ import lombok.NoArgsConstructor;
 import org.example.dto.entity.Birthday;
 import org.example.dto.entity.SelectedCard;
 
+import java.util.Date;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class RegisterUserReq {
-
-    private Birthday birthday;
 
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Invalid email format")
@@ -30,6 +30,10 @@ public class RegisterUserReq {
     @Size(min = 2, max = 50, message = "Nickname must be between 2 and 50 characters")
     private String nickname;
 
-    @NotNull(message = "Selected card cannot be null")
-    private SelectedCard selectedCard;
+    @NotNull(message = "Birthday cannot be null")
+    private Date birthday;
+
+    @NotBlank(message = "Password cannot be blank")
+    @Size(min = 6, message = "Password must be at least 6 characters long")
+    private String password;
 }
