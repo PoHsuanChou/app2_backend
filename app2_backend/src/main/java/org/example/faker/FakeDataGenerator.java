@@ -98,13 +98,21 @@ public class FakeDataGenerator {
             match.setLastInteractionDate(new Date());
 
             matches.add(match);
+
+            // Log who matched, along with their email and password
+            System.out.println("Match found between " + user1.getUsername() + " and " + user2.getUsername());
+            System.out.println("User 1 Email: " + user1.getEmail() + ", Password: " + user1.getPassword());
+            System.out.println("User 2 Email: " + user2.getEmail() + ", Password: " + user2.getPassword());
         }
 
         mongoTemplate.insertAll(matches);
 
         // Log which users matched
+        // Optional: Log the complete match details
         for (Match match : matches) {
-            System.out.println("Match found between " + match.getUser1().getUsername() + " and " + match.getUser2().getUsername());
+            System.out.println("Match details: ");
+            System.out.println("User 1: " + match.getUser1().getUsername() + ", User 2: " + match.getUser2().getUsername());
+            System.out.println("Match Score: " + match.getMatchScore());
         }
     }
 
