@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.example.GoogleSSOMessage;
 import org.example.dto.GoogleSSOResponse;
 import org.example.dto.GoogleTokenRequest;
 import org.example.entity.User;
@@ -41,25 +42,22 @@ public class GoogleAuthController {
                GoogleIdToken idTokenObj = verifier.verify(idToken);
                if (idTokenObj != null) {
                     GoogleIdToken.Payload payload = idTokenObj.getPayload();
-
-                    String userId = payload.getSubject();
                     String email = payload.getEmail();
-                    String name = (String) payload.get("name");
-                    String pictureUrl = (String) payload.get("picture");
+                    // 檢查使用者是否已經存在
+                    User user = googleAuthService.googleFindUser(email);
+                    if(user == null){
+                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.NEW_USER.getMessage(), null, null), HttpStatus.OK);
+                    }else{
+                         // 產生 JWT token
+                         String jwt = jwtService.generateToken(user);
+                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.AUTHENTICATED.getMessage(), jwt, user), HttpStatus.OK);
+                    }
 
-                    // 檢查使用者是否已經存在，若無則創建
-                    User user = googleAuthService.findOrCreateUser(userId, email, name, pictureUrl);
-
-                    // 產生 JWT token
-                    String jwt = jwtService.generateToken(user);
-
-
-                    return new ResponseEntity<>(new GoogleSSOResponse(true, "Authenticated", jwt, user), HttpStatus.OK);
                } else {
-                    return new ResponseEntity<>(new GoogleSSOResponse(false, "Invalid ID Token", null, null), HttpStatus.OK);
+                    return new ResponseEntity<>(new GoogleSSOResponse(false, GoogleSSOMessage.AUTHENTICATION_FAILED.getMessage(), null, null), HttpStatus.OK);
                }
           } catch (Exception e) {
-               return new ResponseEntity<>(new GoogleSSOResponse(false, "Authentication failed", null, null), HttpStatus.INTERNAL_SERVER_ERROR);
+               return new ResponseEntity<>(new GoogleSSOResponse(false, GoogleSSOMessage.INVALID_ID_TOKEN.getMessage(), null, null), HttpStatus.INTERNAL_SERVER_ERROR);
           }
      }
 }

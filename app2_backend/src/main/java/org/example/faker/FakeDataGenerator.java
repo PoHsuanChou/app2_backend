@@ -66,7 +66,6 @@ public class FakeDataGenerator {
                 .lastActive(new Date())
                 .createdAt(new Date())
                 .isOnline(faker.bool().bool())
-                .roles(Arrays.asList(role))
                 .build();
 
         return user;
