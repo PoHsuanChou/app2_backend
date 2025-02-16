@@ -27,7 +27,7 @@ public class SecurityConfig {
     // JWT 過濾器，用於處理 JWT 令牌的驗證
     private final JwtAuthenticationFilter jwtAuthFilter;
     // 認證提供者，處理用戶認證邏輯
-    private final AuthenticationProvider authenticationProvider;
+//    private final AuthenticationProvider authenticationProvider;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -50,8 +50,8 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)  // 使用無狀態會話
                 )
 
-                // 設置認證提供者
-                .authenticationProvider(authenticationProvider)
+                // 設置認證提供者 //如果是標準的用戶名/密碼認證 → 使用 DaoAuthenticationProvider
+//                .authenticationProvider(authenticationProvider)
 
                 // 添加 JWT 過濾器
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -74,10 +74,5 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-//    @Bean
-//    public BCryptPasswordEncoder passwordEncoder() {
-//        return new BCryptPasswordEncoder();
-//    }
 
 }

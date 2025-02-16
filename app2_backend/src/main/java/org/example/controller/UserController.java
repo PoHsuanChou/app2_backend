@@ -3,7 +3,6 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.entity.User;
 import org.example.repository.UserRepository;
-import org.example.security.UserPrincipal;
 import org.example.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,9 +24,9 @@ public class UserController {
         System.out.println(userRepository.findAll());
         return userRepository.findAll();
     }
-    @GetMapping("/user")
-    public ResponseEntity<User> getUserData(@AuthenticationPrincipal UserPrincipal userPrincipal) {
-        User user = userService.getUserData(userPrincipal.getUsername());
-        return ResponseEntity.ok(user);
-    }
+//    @GetMapping("/user")
+//    public ResponseEntity<User> getUserData(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+//        User user = userService.getUserData(userPrincipal.getUsername());
+//        return ResponseEntity.ok(user);
+//    }
 }
