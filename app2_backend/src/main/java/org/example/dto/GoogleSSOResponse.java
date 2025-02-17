@@ -15,4 +15,6 @@ public class GoogleSSOResponse {
     private String message;
     private String token;
     private User user;
+    private boolean isGoogle;
+    private String email;
 }

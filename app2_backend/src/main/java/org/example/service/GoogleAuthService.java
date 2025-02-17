@@ -5,6 +5,8 @@ import org.example.entity.User;
 import org.example.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class GoogleAuthService {
@@ -12,6 +14,7 @@ public class GoogleAuthService {
     private final UserRepository userRepository;
 
     public User googleFindUser(String email) {
-        return userRepository.findByEmail(email).orElseGet(null);
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        return userOptional.isPresent() ? userOptional.get() : null;
     }
 }

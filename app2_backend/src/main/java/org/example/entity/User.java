@@ -26,6 +26,9 @@ public class User implements UserDetails {
     private String username;
     private String email;
     private String password;
+    private String googleId;
+    private boolean isGoogleUser;
+    private String picture;
 
     @DBRef
     private Profile profile;

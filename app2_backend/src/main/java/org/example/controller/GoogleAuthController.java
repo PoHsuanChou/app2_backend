@@ -35,7 +35,7 @@ public class GoogleAuthController {
 
           GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                   new NetHttpTransport(), GsonFactory.getDefaultInstance())
-                  .setAudience(Collections.singletonList("YOUR_GOOGLE_CLIENT_ID")) // 記得替換
+                  .setAudience(Collections.singletonList("776267765563-f9rjs6jav75c50mvsdupk9d5s8qrqel8.apps.googleusercontent.com")) // 記得替換
                   .build();
 
           try {
@@ -46,18 +46,18 @@ public class GoogleAuthController {
                     // 檢查使用者是否已經存在
                     User user = googleAuthService.googleFindUser(email);
                     if(user == null){
-                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.NEW_USER.getMessage(), null, null), HttpStatus.OK);
+                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.NEW_USER.getMessage(), null, null,true,email), HttpStatus.OK);
                     }else{
                          // 產生 JWT token
                          String jwt = jwtService.generateToken(user);
-                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.AUTHENTICATED.getMessage(), jwt, user), HttpStatus.OK);
+                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.AUTHENTICATED.getMessage(), jwt, user,true,email), HttpStatus.OK);
                     }
 
                } else {
-                    return new ResponseEntity<>(new GoogleSSOResponse(false, GoogleSSOMessage.AUTHENTICATION_FAILED.getMessage(), null, null), HttpStatus.OK);
+                    return new ResponseEntity<>(new GoogleSSOResponse(false, GoogleSSOMessage.AUTHENTICATION_FAILED.getMessage(), null, null,false,null), HttpStatus.OK);
                }
           } catch (Exception e) {
-               return new ResponseEntity<>(new GoogleSSOResponse(false, GoogleSSOMessage.INVALID_ID_TOKEN.getMessage(), null, null), HttpStatus.INTERNAL_SERVER_ERROR);
+               return new ResponseEntity<>(new GoogleSSOResponse(false, GoogleSSOMessage.INVALID_ID_TOKEN.getMessage(), null, null,false,null), HttpStatus.INTERNAL_SERVER_ERROR);
           }
      }
 }
