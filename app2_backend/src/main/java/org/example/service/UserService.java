@@ -19,26 +19,33 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public User registerUser(RegisterUserReq registerUserReq) {
-
+    public User registerUser(RegisterUserReq req) {
         // Check if user already exists
-        userRepository.findByEmail(registerUserReq.getEmail()).ifPresent(user -> {
-            throw new UserAlreadyExistsException("User with email " + registerUserReq.getEmail() + " already exists.");
+        userRepository.findByEmail(req.getEmail()).ifPresent(user -> {
+            throw new UserAlreadyExistsException("User with email " + req.getEmail() + " already exists.");
         });
 
         // Encrypt the password
-        String encodedPassword = passwordEncoder.encode(registerUserReq.getPassword());
+        String encodedPassword = passwordEncoder.encode(req.getPassword());
+
+        // Create profile
+        Profile profile = Profile.builder()
+                .name(req.getNickname())
+                .bio(req.getBio())
+                .birthDate(req.getBirthday())
+                .zodiacSign(req.getZodiacSign())
+                .gender(req.getGender())
+                .interests(req.getInterests())
+                .profileImage(req.getProfileImage())
+                .build();
 
         // Create user object
         User newUser = User.builder()
-                .email(registerUserReq.getEmail())
+                .email(req.getEmail())
                 .password(encodedPassword)
-                .username(registerUserReq.getNickname())
-                .profile(Profile.builder()
-                        .name(registerUserReq.getNickname())
-                        .birthDate(registerUserReq.getBirthday())
-                        .gender(registerUserReq.getGender())
-                        .build())
+                .username(req.getNickname())
+                .profile(profile)
+                .isGoogleUser(req.isGoogleLogin())
                 .createdAt(new Date())
                 .lastActive(new Date())
                 .isOnline(true)
@@ -46,8 +53,13 @@ public class UserService {
 
         return userRepository.save(newUser);
     }
+
     public User getUserData(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+    }
+
+    public boolean existsByEmail(String email) {
+        return userRepository.findByEmail(email).isPresent();
     }
 }

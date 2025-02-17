@@ -20,9 +20,10 @@ public class Profile {
     @Id
     private String id;
     private String name;
-    private Date birthDate;
-    private String gender;
-    private List<String> photos;
     private String bio;
+    private Date birthDate;
+    private String zodiacSign;
+    private String gender;
     private List<String> interests;
+    private Integer profileImage;
 }
