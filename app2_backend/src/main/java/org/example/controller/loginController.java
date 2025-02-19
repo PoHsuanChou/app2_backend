@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.EmailCheckRequest;
 import org.example.dto.EmailCheckResponse;
+import org.example.dto.LoginRequest;
+import org.example.dto.LoginResponse;
+import org.example.service.AuthenticationService;
 import org.example.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 public class loginController {
 
     private final UserService userService;
+
+    private final AuthenticationService authenticationService;
 
 
     @PostMapping("/check-email")
@@ -29,5 +34,11 @@ public class loginController {
                 .build();
         
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        String token = authenticationService.authenticate(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(new LoginResponse(token));
     }
 }

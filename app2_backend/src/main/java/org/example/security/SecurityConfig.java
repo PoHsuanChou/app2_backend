@@ -5,8 +5,10 @@ import lombok.RequiredArgsConstructor;
 import org.example.filter.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -33,17 +35,25 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 // 關閉 CSRF 保護，因為我們使用 JWT 做無狀態認證
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
 
                 // 配置請求授權規則
                 .authorizeHttpRequests(auth -> auth
+                        // Swagger UI v3 (OpenAPI) - 確保這些路徑在JWT過濾器之前
                         .requestMatchers(
+                                "/",
+                                "/api/auth/register",
                                 "/api/auth/**",
-                                "/api/register",// 認證相關的 API
-                                "/v3/api-docs/**", // Swagger 文檔
-                                "/swagger-ui/**"   // Swagger UI
-                        ).permitAll()          // 以上路徑允許未認證訪問
-                        .anyRequest().authenticated()  // 其他所有請求需要認證
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml",
+                                "/webjars/**"
+
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
 
                 // 配置會話管理
@@ -62,8 +72,8 @@ public class SecurityConfig {
                         // 處理未認證異常
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json");
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 錯誤
-                            response.getWriter().write("{\"error\": \"Unauthorized\"}");
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.getWriter().write("{\"error\": \"" + authException.getMessage() + "\"}");
                         })
                         // 處理權限不足異常
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
@@ -74,6 +84,24 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("*"));  // 允許所有來源
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
 }
