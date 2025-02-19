@@ -25,5 +25,5 @@ public class Profile {
     private String zodiacSign;
     private String gender;
     private List<String> interests;
-    private Integer profileImage;
+    private String profileImage;
 }

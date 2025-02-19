@@ -38,7 +38,8 @@ public class SecurityConfig {
                 // 配置請求授權規則
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",    // 認證相關的 API
+                                "/api/auth/**",
+                                "/api/register",// 認證相關的 API
                                 "/v3/api-docs/**", // Swagger 文檔
                                 "/swagger-ui/**"   // Swagger UI
                         ).permitAll()          // 以上路徑允許未認證訪問

@@ -38,7 +38,7 @@ public class FakeDataGenerator {
                 .name(faker.name().fullName())
                 .birthDate(faker.date().birthday())
                 .gender(faker.demographic().sex())
-                .photos(Arrays.asList(faker.internet().image(), faker.internet().image()))
+//                .photos(Arrays.asList(faker.internet().image(), faker.internet().image()))
                 .bio(faker.lorem().sentence())
                 .interests(Arrays.asList("Reading", "Gaming", "Traveling"))
                 .build();

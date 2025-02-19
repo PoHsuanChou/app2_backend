@@ -1,32 +1,29 @@
 package org.example.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.dto.GoogleSSOResponse;
+import org.example.dto.UserRegisterRequest;
 import org.example.entity.User;
-import org.example.repository.UserRepository;
 import org.example.service.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Date;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
-    private final UserRepository userRepository;
+
     private final UserService userService;
-    @GetMapping
-    public List<User> getAllUsers() {
-        System.out.println("GGGG");
-        System.out.println(userRepository.findAll());
-        return userRepository.findAll();
+
+    @PostMapping("register")
+    public ResponseEntity<GoogleSSOResponse> getAllUsers(@Valid @RequestBody UserRegisterRequest registerUserReq ) {
+        log.info("Entering registerUser with request: {}", registerUserReq);
+        return userService.registerUser(registerUserReq);
     }
-//    @GetMapping("/user")
-//    public ResponseEntity<User> getUserData(@AuthenticationPrincipal UserPrincipal userPrincipal) {
-//        User user = userService.getUserData(userPrincipal.getUsername());
-//        return ResponseEntity.ok(user);
-//    }
+
 }
