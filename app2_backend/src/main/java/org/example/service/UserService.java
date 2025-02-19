@@ -9,6 +9,7 @@ import org.example.entity.User;
 import org.example.exception.ErrorResponse;
 import org.example.exception.UserAlreadyExistsException;
 import org.example.exception.UserNotFoundException;
+import org.example.repository.ProfileRepository;
 import org.example.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ public class UserService {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ProfileRepository profileRepository;
 
     public ResponseEntity<GoogleSSOResponse> registerUser(UserRegisterRequest request) {
         // Check if user already exists
@@ -35,6 +37,8 @@ public class UserService {
         // Encrypt the password
         if(request.getPassword() != null){
              encodedPassword = passwordEncoder.encode(request.getPassword());
+        }else{
+            encodedPassword = passwordEncoder.encode("googleSSO");
         }
 
         try {
@@ -48,13 +52,13 @@ public class UserService {
                     .interests(request.getInterests())
                     .profileImage(request.getProfileImage())
                     .build();
-
+            Profile savedProfile = profileRepository.save(profile);
             // Create user
             User newUser = User.builder()
                     .email(request.getEmail())
                     .username(request.getNickname())
                     .password(encodedPassword)
-                    .profile(profile)
+                    .profile(savedProfile)
                     .isGoogleUser(true)
                     .createdAt(new Date())
                     .lastActive(new Date())
