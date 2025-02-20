@@ -1,8 +1,12 @@
 package org.example.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.MatchStatus;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -12,32 +16,26 @@ import java.util.Date;
 @Document(collection = "matches")
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Match {
     @Id
     private String id;
 
-    @DBRef
-    private User user1;
+    private String user1Id;
+    private String user2Id;
 
-    @DBRef
-    private User user2;
-
-    @DBRef
-    private DailyTarotDraw user1TarotDraw;
-
-    @DBRef
-    private DailyTarotDraw user2TarotDraw;
+    private String user1TarotDrawId;
+    private String user2TarotDrawId;
 
     private Double matchScore;
 
+    @Indexed
     private MatchStatus status;
+
+    @Indexed
     private Date matchDate;
     private Date lastInteractionDate;
 
-    @Data
-    public static class MatchStatus {
-        private String user1Status;  // "pending", "accepted", "rejected"
-        private String user2Status;
-    }
 }
 

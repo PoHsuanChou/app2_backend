@@ -1,16 +1,24 @@
 package org.example.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.example.aop.MessageType;
+import org.example.dto.MessageReadRequest;
+import org.example.dto.MessageReadResponse;
 import org.example.entity.ChatMessage;
 import org.example.repository.ChatMessageRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 
 @Controller
@@ -18,34 +26,81 @@ import java.util.List;
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final ChatMessageRepository chatMessageRepository;  // 注入聊天记录存储库
+    private final ChatMessageRepository chatMessageRepository;
 
     @MessageMapping("/private-message")
     public void sendPrivateMessage(@Payload ChatMessage message) {
-        System.out.println("Received message: " + message);
-
-        // 将消息保存到数据库
         message.setTimestamp(new Date());
-        chatMessageRepository.save(message); // 保存消息到数据库
 
-        // 发送消息到接收者
+        // 保存消息到數據庫
+        ChatMessage savedMessage = ChatMessage.builder()
+                .senderId(message.getSenderId())
+                .receiverId(message.getReceiverId())  // 設定接收者 ID
+                .content(message.getContent())
+                .type(message.getType())  // 確保 MessageType 由客戶端傳入
+                .timestamp(new Date())
+                .readBy(new HashSet<>())  // 初始化已讀集合
+                .build();
+
+        chatMessageRepository.save(savedMessage);
+
+        // 發送消息給接收者
         messagingTemplate.convertAndSendToUser(
-                message.getTo(), // 接收者的用户名
-                "/queue/messages", // 目标队列
-                message // 要发送的消息
+                message.getReceiverId(),         // WebSocket 用戶名
+                "/queue/private",          // 私人消息隊列
+                savedMessage              // 發送保存後的消息
         );
     }
 
     @MessageMapping("/chat.register")
-    @SendTo("/topic/public") //表示返回的消息會被廣播到
-    public ChatMessage register(@Payload ChatMessage message, SimpMessageHeaderAccessor headerAccessor) {
-        headerAccessor.getSessionAttributes().put("username", message.getFrom()); //將用戶名存儲在 WebSocket session 中
+    @SendTo("/topic/public")
+    public ChatMessage register(
+            @Payload ChatMessage message,
+            SimpMessageHeaderAccessor headerAccessor
+    ) {
+        // 確保 username 不為空
+        if (message.getSenderId() != null) {
+            headerAccessor.getSessionAttributes().put("username", message.getSenderId());
+        }
         return message;
     }
-    // 查询历史消息
-    @MessageMapping("/history")
-    @SendTo("/topic/public")
-    public List<ChatMessage> getChatHistory(@Payload String username) {
-        return chatMessageRepository.findByTo(username); // 查询某个用户的历史消息
+
+    // 獲取聊天歷史記錄
+    @GetMapping("/api/chat/history/{userId}")
+    public ResponseEntity<List<ChatMessage>> getChatHistory(
+            @PathVariable String userId,
+            @RequestParam(required = false) String withUserId
+    ) {
+        List<ChatMessage> messages;
+        if (withUserId != null) {
+            // 獲取兩個用戶之間的聊天記錄
+            messages = chatMessageRepository.findBySenderIdAndReceiverIdOrReceiverIdAndSenderId(
+                    userId, withUserId, withUserId, userId
+            );
+        } else {
+            // 獲取用戶的所有聊天記錄
+            messages = chatMessageRepository.findBySenderIdOrReceiverId(userId, userId);
+        }
+        return ResponseEntity.ok(messages);
+    }
+
+    // 標記消息為已讀
+    @MessageMapping("/message.read")
+    public void markMessageAsRead(@Payload MessageReadRequest request) {
+        chatMessageRepository.findById(request.getMessageId())
+                .ifPresent(message -> {
+                    message.getReadBy().add(request.getUserId());
+                    chatMessageRepository.save(message);
+
+                    // 通知發送者消息已讀
+                    messagingTemplate.convertAndSendToUser(
+                            message.getSenderId(),
+                            "/queue/message-read",
+                            MessageReadResponse.builder()
+                                    .messageId(message.getId())
+                                    .readBy(message.getReadBy())
+                                    .build()
+                    );
+                });
     }
 }

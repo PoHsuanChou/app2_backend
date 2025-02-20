@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -42,27 +43,25 @@ public class UserService {
         }
 
         try {
-            // Create profile
-            Profile profile = Profile.builder()
-                    .name(request.getNickname())
-                    .bio(request.getBio())
-                    .birthDate(request.getBirthday())
-                    .zodiacSign(request.getZodiacSign())
-                    .gender(request.getGender())
-                    .interests(request.getInterests())
-                    .profileImage(request.getProfileImage())
-                    .build();
-            Profile savedProfile = profileRepository.save(profile);
-            // Create user
+            // 直接在創建 User 時包含 Profile
             User newUser = User.builder()
                     .email(request.getEmail())
                     .username(request.getNickname())
                     .password(encodedPassword)
-                    .profile(savedProfile)
+                    .profile(Profile.builder()  // 直接建立 Profile
+                            .name(request.getNickname())
+                            .bio(request.getBio())
+                            .birthDate(request.getBirthday())
+                            .zodiacSign(request.getZodiacSign())
+                            .gender(request.getGender())
+                            .interests(request.getInterests())
+                            .profileImage(request.getProfileImage())
+                            .build())
                     .isGoogleUser(true)
                     .createdAt(new Date())
                     .lastActive(new Date())
-                    .isOnline(true)
+                    .isOnline(false)
+                    .roles(List.of("USER")) // 加上角色
                     .build();
 
             User savedUser = googleAuthService.createGoogleUser(newUser);

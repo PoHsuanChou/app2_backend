@@ -11,14 +11,11 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.Date;
 import java.util.List;
 
-@Document(collection = "profiles")
-@Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Profile {
-    @Id
-    private String id;
     private String name;
     private String bio;
     private Date birthDate;

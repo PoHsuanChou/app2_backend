@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.security.core.GrantedAuthority;
@@ -20,26 +22,27 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@CompoundIndex(def = "{'email': 1}", unique = true)
 public class User implements UserDetails {
     @Id
     private String id;
     private String username;
+
+    @Indexed(unique = true)
     private String email;
     private String password;
     private String googleId;
     private boolean isGoogleUser;
     private String picture;
 
-    @DBRef
-    private Profile profile;
+    private Profile profile; // 嵌入式 Profile
 
-    @DBRef
-    private Location location;
-
+    private String locationId; // 只存儲 ID
+    @Indexed
     private Date lastActive;
     private Date createdAt;
     private boolean isOnline;
-    private List<Role> roles;  // Roles list
+    private List<String> roles;  // Roles list
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // 返回用戶權限列表

@@ -2,7 +2,9 @@ package org.example.entity;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.ChatRoomStatus;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -19,10 +21,12 @@ public class ChatRoom {
     @DBRef
     private Match match;
 
-    @DBRef
-    private List<User> participants;
+    private List<String> participantIds; // 只存 userId，避免 @DBRef
 
-    private String status;  // "active", "archived"
+    @Indexed
+    private ChatRoomStatus status;  // 使用枚舉
+
+    @Indexed
     private Date createdAt;
     private Date lastMessageAt;
 }
