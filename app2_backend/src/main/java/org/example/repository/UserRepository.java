@@ -13,5 +13,7 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> findByIsOnline(boolean isOnline);
     Optional<User> findByEmail(String email);  // This returns Optional<User>
 
+    List<User> findByIdIn(List<String> ids);
+
 }
 

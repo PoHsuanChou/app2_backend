@@ -1,21 +1,36 @@
 package org.example.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.dto.MatchResponse;
+import org.example.entity.ChatMessagePreview;
 import org.example.entity.Match;
+import org.example.entity.User;
+import org.example.repository.UserRepository;
+import org.example.service.ChatMessagePreviewService;
 import org.example.service.MatchService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/matches")
 @RequiredArgsConstructor
+@Slf4j
 public class MatchController {
 
     private final MatchService matchService;
+    private final UserRepository userRepository;
+    private final ChatMessagePreviewService chatMessagePreviewService;
 
     @PostMapping
     public ResponseEntity<Match> createMatch(@RequestBody Match match) {
@@ -23,14 +38,68 @@ public class MatchController {
         return ResponseEntity.ok(createdMatch);
     }
 
-    @GetMapping("/matches")
-    public ResponseEntity<List<Match>> getMatchesByUser(HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId"); // ✅ 從 Filter 存的值拿 userId
+    @GetMapping("/findMatches")
+    @Operation(
+            summary = "Get matches by user ID",
+            description = "Fetches the list of matches for the authenticated user.",
+            security = @SecurityRequirement(name = "bearerAuth") // 指定安全要求
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved matches"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized, user ID not found")
+    })
+    public ResponseEntity<List<MatchResponse>> getMatchesByUser(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId"); // ✅ 從 Filter 取得 userId
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
+        // 取得匹配紀錄
         List<Match> matches = matchService.getMatchesByUserId(userId);
-        return ResponseEntity.ok(matches);
+
+        // 取得對方的 userId (過濾掉自己)
+        List<String> matchedUserIds = matches.stream()
+                .map(m -> m.getUser1Id().equals(userId) ? m.getUser2Id() : m.getUser1Id())
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 查詢所有對方的用戶資訊
+        List<User> matchedUsers = userRepository.findByIdIn(matchedUserIds);
+
+        // 建立回應列表
+        List<MatchResponse> response = new ArrayList<>();
+
+        // 先加入 "likes" 訊息
+        response.add(new MatchResponse("likes", null, null, Math.max(matches.size() - 1, 0)));
+
+        // 加入匹配對象資訊
+        for (User user : matchedUsers) {
+            log.info("user:{}",user);
+            response.add(new MatchResponse(
+                    user.getId(),
+                    user.getNickName(),
+                    user.getPicture() != null ? user.getPicture() : "default.png",
+                    0
+            ));
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/previews")
+    @Operation(
+            summary = "Get chat message previews",
+            description = "Fetches chat message previews for the authenticated user.",
+            security = @SecurityRequirement(name = "bearerAuth") // 指定安全要求
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved chat message previews"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized, user ID not found")
+    })
+    public ResponseEntity<List<ChatMessagePreview>> getChatPreviews(
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<ChatMessagePreview> previews = chatMessagePreviewService.getChatPreviews(userId);
+        return ResponseEntity.ok(previews);
     }
 }

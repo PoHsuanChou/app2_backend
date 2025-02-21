@@ -50,9 +50,14 @@ public class User implements UserDetails {
     }
 
     @Override
+    //TODO
     public String getUsername() {
         // 使用 email 作為 username
         return email;
+    }
+
+    public String getNickName(){
+        return username;
     }
 
     @Override

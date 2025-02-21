@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ChatMessageRepository extends MongoRepository<ChatMessage, String> {
@@ -17,4 +18,8 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
 
     // 查找用戶的所有聊天記錄
     List<ChatMessage> findBySenderIdOrReceiverId(String senderId, String to);
+
+    Optional<ChatMessage> findTopByChatRoomIdOrderByTimestampDesc(String chatRoomId);
+
+    boolean existsBySenderIdOrReceiverId(String senderId, String receiverId);
 }

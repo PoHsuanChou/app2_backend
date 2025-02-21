@@ -13,8 +13,12 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 public class ChatMessagePreview {
+    private String id;
     private String senderId;
+    private String name;       // 新增：對應前端 name
+    private String image;      // 新增：對應前端 image
     private String content;
     private MessageType type;
     private Date timestamp;
+    private Boolean yourTurn;  // 新增：對應前端 yourTurn
 }

@@ -1,5 +1,7 @@
 package org.example.controller;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.EmailCheckRequest;
@@ -37,6 +39,11 @@ public class loginController {
     }
 
     @PostMapping("/login")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully logged in, returns JWT token"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized, invalid email or password"),
+            @ApiResponse(responseCode = "400", description = "Bad Request, invalid input")
+    })
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         String token = authenticationService.authenticate(request.getEmail(), request.getPassword());
         return ResponseEntity.ok(new LoginResponse(token));
