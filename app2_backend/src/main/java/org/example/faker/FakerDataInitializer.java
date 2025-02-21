@@ -120,7 +120,6 @@ public class FakerDataInitializer implements CommandLineRunner {
                         .content(faker.lorem().sentence())
                         .type(MessageType.TEXT)
                         .timestamp(faker.date().past(30, TimeUnit.DAYS))
-                        .readBy(new HashSet<>())
                         .build();
 
                 chatMessages.add(chatMessage);

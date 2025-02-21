@@ -25,5 +25,4 @@ public class ChatMessage {
     private String content;
     private MessageType type;
     private Date timestamp;
-    private Set<String> readBy;
 }

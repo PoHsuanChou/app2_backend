@@ -6,6 +6,7 @@ import org.example.dto.MessageReadRequest;
 import org.example.dto.MessageReadResponse;
 import org.example.entity.ChatMessage;
 import org.example.repository.ChatMessageRepository;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -27,6 +28,7 @@ public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageRepository chatMessageRepository;
+    private final RedisTemplate<String, ChatMessage> redisTemplate;
 
     @MessageMapping("/private-message")
     public void sendPrivateMessage(@Payload ChatMessage message) {
@@ -39,10 +41,12 @@ public class ChatController {
                 .content(message.getContent())
                 .type(message.getType())  // 確保 MessageType 由客戶端傳入
                 .timestamp(new Date())
-                .readBy(new HashSet<>())  // 初始化已讀集合
                 .build();
 
         chatMessageRepository.save(savedMessage);
+        // 发布消息到 Redis
+        redisTemplate.convertAndSend("chat:private", savedMessage);
+
 
         // 發送消息給接收者
         messagingTemplate.convertAndSendToUser(
@@ -89,7 +93,6 @@ public class ChatController {
     public void markMessageAsRead(@Payload MessageReadRequest request) {
         chatMessageRepository.findById(request.getMessageId())
                 .ifPresent(message -> {
-                    message.getReadBy().add(request.getUserId());
                     chatMessageRepository.save(message);
 
                     // 通知發送者消息已讀
@@ -98,7 +101,6 @@ public class ChatController {
                             "/queue/message-read",
                             MessageReadResponse.builder()
                                     .messageId(message.getId())
-                                    .readBy(message.getReadBy())
                                     .build()
                     );
                 });

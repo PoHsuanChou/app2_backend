@@ -50,7 +50,13 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/v3/api-docs/**",
                                 "/v3/api-docs.yaml",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/ws/**",// 允許 WebSocket 端點的訪問
+                                "/ws",
+                                "/topic/**",
+                                "/app/**",
+                                "/user/**",
+                                "/queue/**"
 
                         ).permitAll()
                         .anyRequest().authenticated()
