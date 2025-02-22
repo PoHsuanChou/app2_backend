@@ -53,6 +53,14 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/ws/**",// 允許 WebSocket 端點的訪問
                                 "/ws",
+                                "/ws/info/**",     // SockJS 信息端點
+                                "/ws/**/*.js",     // SockJS JavaScript 文件
+                                "/ws/**/*.map",    // Source maps
+                                "/ws/*/eventsource",  // EventSource 傳輸
+                                "/ws/*/xhr",         // XHR 傳輸
+                                "/ws/*/xhr_send",    // XHR 發送
+                                "/ws/*/xhr_streaming", // XHR 流
+                                "/ws/*/websocket",     // WebSocket 傳輸
                                 "/topic/**",
                                 "/app/**",
                                 "/user/**",

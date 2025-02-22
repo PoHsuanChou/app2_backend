@@ -1,5 +1,6 @@
 package org.example.config;
 
+import org.example.interceptor.CustomHandshakeInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -19,21 +20,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(
-                        "http://localhost:19006",
-                        "http://localhost:8080",
-                        "http://10.0.2.2:8080"  // Android 模擬器
-                )
-                .setHandshakeHandler(new DefaultHandshakeHandler() {
-                    @Override
-                    protected Principal determineUser(ServerHttpRequest request,
-                                                      WebSocketHandler wsHandler,
-                                                      Map<String, Object> attributes) {
-                        // 打印握手詳情
-                        System.out.println("Handshake request: " + request.getHeaders());
-                        return super.determineUser(request, wsHandler, attributes);
-                    }
-                });
+                .setAllowedOriginPatterns("*")  // 開發環境可以允許所有來源
+                .addInterceptors(new CustomHandshakeInterceptor())
+                .setHandshakeHandler(new DefaultHandshakeHandler()) // 添加默認握手處理器
+                .withSockJS()  // 啟用 SockJS
+                .setStreamBytesLimit(512 * 1024)  // 設置流限制
+                .setHttpMessageCacheSize(1000)    // 設置消息緩存大小
+                .setDisconnectDelay(30 * 1000);   // 設置斷開延遲
     }
 
     @Override
