@@ -48,7 +48,7 @@ public class GoogleAuthController {
                     }else{
                          // 產生 JWT token
                          String jwt = jwtService.generateToken(user);
-                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.AUTHENTICATED.getMessage(), jwt, user,true,email), HttpStatus.OK);
+                         return new ResponseEntity<>(new GoogleSSOResponse(true, GoogleSSOMessage.AUTHENTICATED.getMessage(), jwt, user.getId(),true,email), HttpStatus.OK);
                     }
 
                } else {

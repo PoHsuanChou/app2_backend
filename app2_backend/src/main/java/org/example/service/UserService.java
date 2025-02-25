@@ -71,7 +71,7 @@ public class UserService {
                     .success(true)
                     .message("Google user registered successfully")
                     .token(jwt)
-                    .user(savedUser)
+                    .userId(savedUser.getId())
                     .isGoogle(true)
                     .email(request.getEmail())
                     .build());
@@ -82,7 +82,7 @@ public class UserService {
                     .success(false)
                     .message("Google user registered failed")
                     .token(null)
-                    .user(null)
+                    .userId(null)
                     .isGoogle(true)
                     .email(request.getEmail())
                     .build());

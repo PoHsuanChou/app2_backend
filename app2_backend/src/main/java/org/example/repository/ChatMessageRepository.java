@@ -22,4 +22,6 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     Optional<ChatMessage> findTopByChatRoomIdOrderByTimestampDesc(String chatRoomId);
 
     boolean existsBySenderIdOrReceiverId(String senderId, String receiverId);
+
+    List<ChatMessage> findByChatRoomIdOrderByTimestampAsc(String chatRoomId);
 }

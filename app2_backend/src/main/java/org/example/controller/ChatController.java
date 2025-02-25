@@ -1,9 +1,11 @@
 package org.example.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.aop.MessageType;
 import org.example.dto.MessageReadRequest;
 import org.example.dto.MessageReadResponse;
+import org.example.dto.chat.MessagePayload;
 import org.example.entity.ChatMessage;
 import org.example.repository.ChatMessageRepository;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -24,6 +26,7 @@ import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -31,8 +34,8 @@ public class ChatController {
     private final RedisTemplate<String, ChatMessage> redisTemplate;
 
     @MessageMapping("/private-message")
-    public void sendPrivateMessage(@Payload ChatMessage message) {
-        message.setTimestamp(new Date());
+    public void sendPrivateMessage(@Payload MessagePayload message) {
+        log.info("sendPrivateMessage={} ",message );
 
         // 保存消息到數據庫
         ChatMessage savedMessage = ChatMessage.builder()
@@ -41,18 +44,47 @@ public class ChatController {
                 .content(message.getContent())
                 .type(message.getType())  // 確保 MessageType 由客戶端傳入
                 .timestamp(new Date())
+                .chatRoomId(message.getChatRoomId())
                 .build();
 
         chatMessageRepository.save(savedMessage);
         // 发布消息到 Redis
+        // 发布消息到 Redis
         redisTemplate.convertAndSend("chat:private", savedMessage);
 
 
-        // 發送消息給接收者
+        // 發送消息到聊天室 - 所有訂閱該聊天室的用戶都會收到
+        messagingTemplate.convertAndSend(
+                "/topic/chat/" + message.getChatRoomId(),
+                savedMessage
+        );
+
+        // 也可以單獨發送給接收者 (如果需要)
         messagingTemplate.convertAndSendToUser(
-                message.getReceiverId(),         // WebSocket 用戶名
-                "/queue/private",          // 私人消息隊列
-                savedMessage              // 發送保存後的消息
+                message.getReceiverId(),
+                "/queue/private",
+                savedMessage
+        );
+    }
+
+    // 新增方法：獲取聊天歷史記錄
+    @MessageMapping("/get-chat-history")
+    public void getChatHistory(String chatRoomId, SimpMessageHeaderAccessor headerAccessor) {
+        // Get the user ID from the WebSocket session
+        String userId = headerAccessor.getUser().getName(); // Assuming you've set the user principal
+
+        log.info("Received request for chat history. ChatRoomId: {}, UserId: {}", chatRoomId, userId);
+
+        // Fetch chat history from the database
+        List<ChatMessage> chatHistory = chatMessageRepository.findByChatRoomIdOrderByTimestampAsc(chatRoomId);
+
+        log.info("Found {} messages for chatRoomId: {}", chatHistory.size(), chatRoomId);
+
+        // Send the chat history to the user
+        messagingTemplate.convertAndSendToUser(
+                userId,
+                "/queue/chat-history",
+                chatHistory
         );
     }
 

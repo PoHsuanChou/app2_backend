@@ -8,7 +8,10 @@ import org.example.dto.EmailCheckRequest;
 import org.example.dto.EmailCheckResponse;
 import org.example.dto.LoginRequest;
 import org.example.dto.LoginResponse;
+import org.example.entity.User;
+import org.example.repository.UserRepository;
 import org.example.service.AuthenticationService;
+import org.example.service.JwtService;
 import org.example.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +25,9 @@ public class loginController {
     private final UserService userService;
 
     private final AuthenticationService authenticationService;
+
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
 
 
     @PostMapping("/check-email")
@@ -46,6 +52,9 @@ public class loginController {
     })
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         String token = authenticationService.authenticate(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(new LoginResponse(token));
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(new LoginResponse(token,user.getId()));
     }
 }
