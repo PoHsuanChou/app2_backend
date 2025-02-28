@@ -7,7 +7,9 @@ import org.example.dto.MessageReadRequest;
 import org.example.dto.MessageReadResponse;
 import org.example.dto.chat.MessagePayload;
 import org.example.entity.ChatMessage;
+import org.example.entity.Match;
 import org.example.repository.ChatMessageRepository;
+import org.example.repository.MatchRepository;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -32,6 +34,7 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageRepository chatMessageRepository;
     private final RedisTemplate<String, ChatMessage> redisTemplate;
+    private final MatchRepository matchRepository;
 
     @MessageMapping("/private-message")
     public void sendPrivateMessage(@Payload MessagePayload message) {
@@ -48,16 +51,29 @@ public class ChatController {
                 .build();
 
         chatMessageRepository.save(savedMessage);
+
+
+        //更新last interactionDate
+        Match match = matchRepository.findByUserIds(message.getSenderId(), message.getReceiverId());
+        if (match != null) {
+            match.setLastInteractionDate(new Date());  // 更新為當前時間
+            matchRepository.save(match);  // 保存更新
+        }
+
+
+
+
+
         // 发布消息到 Redis
         // 发布消息到 Redis
         redisTemplate.convertAndSend("chat:private", savedMessage);
 
 
-        // 發送消息到聊天室 - 所有訂閱該聊天室的用戶都會收到
-        messagingTemplate.convertAndSend(
-                "/topic/chat/" + message.getChatRoomId(),
-                savedMessage
-        );
+//        // 發送消息到聊天室 - 所有訂閱該聊天室的用戶都會收到
+//        messagingTemplate.convertAndSend(
+//                "/topic/chat/" + message.getChatRoomId(),
+//                savedMessage
+//        );
 
         // 也可以單獨發送給接收者 (如果需要)
         messagingTemplate.convertAndSendToUser(
@@ -79,6 +95,7 @@ public class ChatController {
         List<ChatMessage> chatHistory = chatMessageRepository.findByChatRoomIdOrderByTimestampAsc(chatRoomId);
 
         log.info("Found {} messages for chatRoomId: {}", chatHistory.size(), chatRoomId);
+        log.info("for chatRoomId: {} chatHistory={}",chatRoomId,chatHistory);
 
         // Send the chat history to the user
         messagingTemplate.convertAndSendToUser(

@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface ChatRoomRepository extends MongoRepository<ChatRoom, String> {
     List<ChatRoom> findByParticipantIdsContains(String userId);
+
+    List<ChatRoom> findByParticipantIdsContaining(String userId);
 }
