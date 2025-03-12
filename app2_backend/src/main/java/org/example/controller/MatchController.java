@@ -8,10 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.MatchResponse;
-import org.example.entity.ChatMessagePreview;
-import org.example.entity.ChatRoom;
-import org.example.entity.Match;
-import org.example.entity.User;
+import org.example.entity.*;
+import org.example.repository.ChatMessageRepository;
 import org.example.repository.ChatRoomRepository;
 import org.example.repository.UserRepository;
 import org.example.service.ChatMessagePreviewService;
@@ -36,6 +34,7 @@ public class MatchController {
     private final UserRepository userRepository;
     private final ChatMessagePreviewService chatMessagePreviewService;
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
 
     @PostMapping
     public ResponseEntity<Match> createMatch(@RequestBody Match match) {
@@ -46,7 +45,7 @@ public class MatchController {
     @GetMapping("/findMatches")
     @Operation(
             summary = "Get matches by user ID",
-            description = "Fetches the list of matches for the authenticated user.",
+            description = "Fetches the list of matches for the authenticated user who haven't chatted yet.",
             security = @SecurityRequirement(name = "bearerAuth") // 指定安全要求
     )
     @ApiResponses(value = {
@@ -60,7 +59,6 @@ public class MatchController {
         }
 
         // 取得匹配紀錄
-        //TODO 且沒有聊天過
         List<Match> matches = matchService.getMatchesByUserId(userId);
 
         // 取得對方的 userId (過濾掉自己)
@@ -69,24 +67,45 @@ public class MatchController {
                 .distinct()
                 .collect(Collectors.toList());
 
-        // 查詢所有對方的用戶資訊
-        List<User> matchedUsers = userRepository.findByIdIn(matchedUserIds);
-
-        // 查詢所有聊天房間，過濾掉有聊天記錄的用戶
+        // 查詢所有與當前用戶相關的聊天室
         List<ChatRoom> chatRooms = chatRoomRepository.findByParticipantIdsContaining(userId);
+
+        // 查詢所有已發送過消息的聊天室ID
+        List<String> chatRoomIdsWithMessages = chatMessageRepository.findBySenderId(userId)
+                .stream()
+                .map(ChatMessage::getChatRoomId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 也查詢接收過消息的聊天室ID
+        chatRoomIdsWithMessages.addAll(
+                chatMessageRepository.findByReceiverId(userId)
+                        .stream()
+                        .map(ChatMessage::getChatRoomId)
+                        .distinct()
+                        .collect(Collectors.toList())
+        );
+
+        // 找出已聊天過的用戶ID
         Set<String> usersWithChatHistory = new HashSet<>();
 
         for (ChatRoom chatRoom : chatRooms) {
-            List<String> participants = chatRoom.getParticipantIds();
-            // 檢查是否只有這兩個使用者在聊天房間中
-            if (participants.size() == 2 && participants.contains(userId)) {
-                usersWithChatHistory.add(participants.stream()
-                        .filter(participantId -> !participantId.equals(userId))
-                        .findFirst()
-                        .orElse(null));
+            // 只檢查有消息記錄的聊天室
+            if (chatRoomIdsWithMessages.contains(chatRoom.getId())) {
+                List<String> participants = chatRoom.getParticipantIds();
+                // 檢查是否只有兩個用戶的聊天室
+                if (participants.size() == 2 && participants.contains(userId)) {
+                    // 添加對方ID到已聊天列表
+                    participants.stream()
+                            .filter(id -> !id.equals(userId))
+                            .findFirst()
+                            .ifPresent(usersWithChatHistory::add);
+                }
             }
         }
 
+        // 查詢所有對方的用戶資訊
+        List<User> matchedUsers = userRepository.findByIdIn(matchedUserIds);
 
         // 建立回應列表
         List<MatchResponse> response = new ArrayList<>();
@@ -94,11 +113,10 @@ public class MatchController {
         // 先加入 "likes" 訊息
         response.add(new MatchResponse("likes", null, null, Math.max(matches.size() - 1, 0)));
 
-        // 加入匹配對象資訊
         // 加入匹配對象資訊，排除有聊天記錄的用戶
         for (User user : matchedUsers) {
             if (!usersWithChatHistory.contains(user.getId())) {
-                log.info("user:{}", user);
+                log.info("發現未聊天的匹配用戶: {}", user.getNickName());
                 response.add(new MatchResponse(
                         user.getId(),
                         user.getNickName(),

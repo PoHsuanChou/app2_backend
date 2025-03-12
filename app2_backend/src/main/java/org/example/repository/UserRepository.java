@@ -2,6 +2,7 @@ package org.example.repository;
 
 import org.example.entity.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,6 +15,9 @@ public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByEmail(String email);  // This returns Optional<User>
 
     List<User> findByIdIn(List<String> ids);
+
+    @Query("{ 'profile.gender': ?0 }")
+    List<User> findByGender(String gender);
 
 }
 

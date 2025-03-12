@@ -22,9 +22,7 @@ public class DailyTarotDraw {
     @Indexed
     private Date date;
 
-    private String cardId;
-
-    private MatchingAttributes matchingAttributes; // 嵌入式
+    private Integer cardId;
 
     private List<String> potentialMatchUserIds; // 只存儲 ID
 
