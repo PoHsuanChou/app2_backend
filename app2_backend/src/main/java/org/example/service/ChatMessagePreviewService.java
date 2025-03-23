@@ -8,12 +8,10 @@ import org.example.entity.User;
 import org.example.repository.ChatMessageRepository;
 import org.example.repository.ChatRoomRepository;
 import org.example.repository.UserRepository;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,43 +26,37 @@ public class ChatMessagePreviewService {
      * 獲取當前用戶的聊天預覽列表
      */
     public List<ChatMessagePreview> getChatPreviews(String currentUserId) {
-        // 查找用戶參與的所有聊天室
+        // Handle null or empty userId case
+        if (currentUserId == null || currentUserId.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 1. Find all chat rooms where user participates
         List<ChatRoom> chatRooms = chatRoomRepository.findByParticipantIdsContaining(currentUserId);
+        if (chatRooms.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        // 查找用戶發送的所有消息的聊天室ID
-        List<String> sentMessageChatRoomIds = chatMessageRepository.findBySenderId(currentUserId)
-                .stream()
-                .map(ChatMessage::getChatRoomId)
-                .distinct()
-                .collect(Collectors.toList());
+        // 2. Get chat room IDs with actual messages (optimization: combine sender/receiver queries)
+        Set<String> activeChatRoomIds = chatMessageRepository.findDistinctChatRoomIdsBySenderIdOrReceiverId(
+                currentUserId, currentUserId);
 
-        // 查找用戶接收的所有消息的聊天室ID
-        List<String> receivedMessageChatRoomIds = chatMessageRepository.findByReceiverId(currentUserId)
-                .stream()
-                .map(ChatMessage::getChatRoomId)
-                .distinct()
-                .collect(Collectors.toList());
-
-        // 合併所有有消息的聊天室ID
-        Set<String> activeChatRoomIds = new HashSet<>();
-        activeChatRoomIds.addAll(sentMessageChatRoomIds);
-        activeChatRoomIds.addAll(receivedMessageChatRoomIds);
-
+        // 3. Build previews
         List<ChatMessagePreview> previews = new ArrayList<>();
 
         for (ChatRoom chatRoom : chatRooms) {
-            // 只處理雙人聊天且有消息記錄的聊天室
-            if (chatRoom.getParticipantIds().size() != 2 || !activeChatRoomIds.contains(chatRoom.getId())) {
+            // Skip if not a two-person chat or no messages
+            if (chatRoom.getParticipantIds().size() != 2 ||
+                    !activeChatRoomIds.contains(chatRoom.getId())) {
                 continue;
             }
 
-            // 找到該聊天室的最後一條訊息
+            // Get the latest message
             ChatMessage lastMessage = chatMessageRepository
                     .findTopByChatRoomIdOrderByTimestampDesc(chatRoom.getId())
                     .orElse(null);
 
             if (lastMessage != null) {
-                // 獲取對話的另一方用戶ID
                 String otherUserId = chatRoom.getParticipantIds().stream()
                         .filter(id -> !id.equals(currentUserId))
                         .findFirst()
@@ -76,8 +68,9 @@ public class ChatMessagePreviewService {
             }
         }
 
-        // 按最新消息時間戳排序
-        previews.sort((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()));
+        // 4. Sort by timestamp (descending)
+        previews.sort(Comparator.comparing(ChatMessagePreview::getTimestamp,
+                Comparator.nullsLast(Comparator.reverseOrder())));
 
         return previews;
     }
@@ -87,18 +80,29 @@ public class ChatMessagePreviewService {
      */
     private ChatMessagePreview createPreview(ChatMessage lastMessage, String otherUserId,
                                              String currentUserId, String chatRoomId) {
-        // 獲取對話對象的信息
-        User otherUser = userRepository.findById(otherUserId).orElse(null);
+        User otherUser = userRepository.findById(otherUserId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + otherUserId));
+
+        String name = otherUser.getNickName() != null ?
+                otherUser.getNickName() : "Unknown";
+        String image = otherUser.getPicture() != null ?
+                otherUser.getPicture() : "default.png";
+
+        // Use profile image if available and picture is null
+        if (image.equals("default.png") && otherUser.getProfile() != null &&
+                otherUser.getProfile().getProfileImage() != null) {
+            image = otherUser.getProfile().getProfileImage();
+        }
 
         return ChatMessagePreview.builder()
-                .id(chatRoomId)  // 使用聊天室ID而不是消息ID
-                .senderId(otherUserId)  // 顯示對話對象的ID，不是最後發消息的人
-                .name(otherUser != null ? otherUser.getNickName() : "Unknown")
-                .image(otherUser != null ? otherUser.getPicture() : "default.png")
+                .id(chatRoomId)
+                .senderId(otherUserId)
+                .name(name)
+                .image(image)
                 .content(lastMessage.getContent())
                 .type(lastMessage.getType())
                 .timestamp(lastMessage.getTimestamp())
-                .yourTurn(!lastMessage.getSenderId().equals(currentUserId))  // 如果最後發消息的不是當前用戶，則輪到他回复
+                .yourTurn(!lastMessage.getSenderId().equals(currentUserId))
                 .build();
     }
 }

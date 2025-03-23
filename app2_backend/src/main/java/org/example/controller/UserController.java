@@ -1,76 +1,174 @@
 package org.example.controller;
 
-import jakarta.validation.Valid;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.dto.GoogleSSOResponse;
-import org.example.dto.UserRegisterRequest;
+import org.example.dto.ApiResponse;
 import org.example.entity.User;
-import org.example.service.UserService;
+import org.example.exception.ResourceNotFoundException;
+import org.example.repository.UserRepository;
+import org.example.service.FileStorageService;
+import org.example.service.JwtService;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.util.Date;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/user")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "User Management", description = "APIs for managing users")
 public class UserController {
 
-    private final UserService userService;
+    private final UserRepository userRepository;
+    private final FileStorageService fileStorageService; // 用於處理文件上傳
+    private final JwtService jwtService;
 
-    @Operation(summary = "Register a new user",
-            description = "Register a new user with their profile information")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User registered successfully",
-                    content = @Content(schema = @Schema(implementation = GoogleSSOResponse.class),
-                            examples = @ExampleObject(value = """
-                            {
-                                "success": true,
-                                "message": "User registered successfully",
-                                "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                                "user": {
-                                    "id": "65d3524d8b91e2054f682a7c",
-                                    "email": "test@example.com",
-                                    "username": "Test User"
-                                },
-                                "isGoogle": true,
-                                "email": "test@example.com"
-                            }
-                            """))),
-            @ApiResponse(responseCode = "400", description = "Invalid input or user already exists")
-    })
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "User registration details",
-            required = true,
-            content = @Content(
-                    examples = @ExampleObject(value = """
-                            {
-                                "email": "test@example.com",
-                                "password": null,
-                                "nickname": "Test User",
-                                "bio": "This is a test bio",
-                                "gender": "Male",
-                                "birthday": "1992-07-29T00:00:00.000Z",
-                                "zodiacSign": "Leo",
-                                "profileImage": "https://example.com/image.jpg",
-                                "interests": ["塔羅牌", "占星術", "心理學"],
-                                "isGoogleLogin": true
-                            }
-                            """)))
-    @PostMapping("/register")
-    public ResponseEntity<GoogleSSOResponse> registerUser(@RequestBody UserRegisterRequest request) {
-        return userService.registerUser(request);
+    @PostMapping(value = "/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProfilePicture(
+            @RequestPart("profileImage") MultipartFile file,
+            HttpServletRequest request) {
+
+        String userId = (String) request.getAttribute("userId");
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse(false, "User not authenticated"));
+        }
+
+        try {
+            log.info("Received file: name={}, size={}, contentType={}",
+                    file.getOriginalFilename(),
+                    file.getSize(),
+                    file.getContentType());
+
+            // 檢查文件
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(false, "Please select a file to upload"));
+            }
+
+            // 生成文件名
+            String fileExtension = ".jpg"; // 默認擴展名
+            String newFileName = UUID.randomUUID().toString() + fileExtension;
+
+            // 保存文件
+            String savedFileName = fileStorageService.storeFile(file, newFileName);
+
+            // 更新用戶資料
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+            // 刪除舊圖片
+            if (user.getPicture() != null && !user.getPicture().equals("default.png")) {
+                fileStorageService.deleteFile(user.getPicture());
+            }
+
+            // 更新用戶圖片路徑
+            user.setPicture(savedFileName);
+            userRepository.save(user);
+
+            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/uploads/")
+                    .path(savedFileName)
+                    .toUriString();
+
+            return ResponseEntity.ok(new ApiResponse(true, "Profile picture updated successfully", fileUrl));
+
+        } catch (Exception e) {
+            log.error("Error uploading file", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse(false, "Could not upload profile picture: " + e.getMessage()));
+        }
+    }
+    // 獲取當前用戶的照片
+    @GetMapping("/profile-picture/current")
+    public ResponseEntity<?> getCurrentUserProfilePicture(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            // 从 JWT 获取用户信息
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ApiResponse(false, "Authorization header is missing or invalid"));
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtService.extractUserId(token);
+
+            // 从数据库获取用户
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+            String fileName = user.getPicture();
+            if (fileName == null) {
+                fileName = "default.png";
+            }
+
+            // 构建文件URL
+            // MODIFIED: Construct the URL based on your static resource handling
+            String fileUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/static/uploads/") // Match your Spring resource mapping
+                    .path(fileName)
+                    .toUriString();
+
+            return ResponseEntity.ok(new ApiResponse(true, fileUrl));
+        } catch (Exception e) {
+            log.error("Error retrieving profile picture", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse(false, "Could not retrieve profile picture: " + e.getMessage()));
+        }
     }
 
+    // 刪除照片
+    @DeleteMapping("/profile-picture")
+    public ResponseEntity<?> deleteProfilePicture(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            // 驗證 JWT
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ApiResponse(false, "Authorization header is missing or invalid"));
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtService.extractUserId(token);
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+            String currentPicture = user.getPicture();
+
+            // 檢查是否為默認圖片
+            if (currentPicture == null || currentPicture.equals("default.png")) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(false, "Cannot delete default profile picture"));
+            }
+
+            // 刪除文件
+            fileStorageService.deleteFile(currentPicture);
+
+            // 重置為默認圖片
+            user.setPicture("default.png");
+            userRepository.save(user);
+
+            return ResponseEntity.ok(new ApiResponse(true, "Profile picture deleted successfully"));
+
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error deleting profile picture", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse(false, "Could not delete profile picture: " + e.getMessage()));
+        }
+    }
 }

@@ -35,12 +35,13 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 // 關閉 CSRF 保護，因為我們使用 JWT 做無狀態認證
-//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
 
                 // 配置請求授權規則
                 .authorizeHttpRequests(auth -> auth
                         // Swagger UI v3 (OpenAPI) - 確保這些路徑在JWT過濾器之前
+                        .requestMatchers("/static/uploads/**").permitAll()
                         .requestMatchers(
                                 "/",
 //                                "/api/auth/register",
@@ -66,7 +67,6 @@ public class SecurityConfig {
                                 "/app/**",
                                 "/user/**",
                                 "/queue/**"
-
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -104,7 +104,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*"));  // 允許所有來源
+        configuration.setAllowedOrigins(Arrays.asList("*"));  // 允许所有来源
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));

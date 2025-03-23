@@ -32,6 +32,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        final String requestPath = request.getRequestURI();
+        System.out.println("Request Path: " + requestPath); // 添加日志
+
+        // Skip JWT processing for /uploads/** paths
+        if (requestPath.startsWith("/static/uploads/")) {
+            System.out.println("Skipping JWT filter for path: " + requestPath);
+            filterChain.doFilter(request, response);
+            return;
+        }
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userId;

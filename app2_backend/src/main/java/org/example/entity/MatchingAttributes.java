@@ -9,12 +9,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class MatchingAttributes {
-    private String elementalAffinity;
-    private List<String> zodiacAffinity;
-    private Integer numerologicalValue;
-}
+//@Data
+//@NoArgsConstructor
+//@AllArgsConstructor
+//@Builder
+//public class MatchingAttributes {
+//    private String elementalAffinity;
+//    private List<String> zodiacAffinity;
+//    private Integer numerologicalValue;
+//}

@@ -2,10 +2,12 @@ package org.example.repository;
 
 import org.example.entity.ChatMessage;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ChatMessageRepository extends MongoRepository<ChatMessage, String> {
@@ -28,6 +30,10 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     List<ChatMessage> findBySenderId(String sendId);
 
     List<ChatMessage> findByReceiverId(String receiveId);
+
+    // New method to optimize the active chat room ID collection
+    @Query(value = "{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?1 } ] }", fields = "{ 'chatRoomId': 1 }")
+    Set<String> findDistinctChatRoomIdsBySenderIdOrReceiverId(String senderId, String receiverId);
 
 
 }

@@ -23,18 +23,33 @@ public class FileStorageService {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    public String storeFile(MultipartFile file) throws IOException {
-        // 生成唯一文件名
-        String fileName = StringUtils.cleanPath(UUID.randomUUID().toString() + "-" +
-                Objects.requireNonNull(file.getOriginalFilename()));
+    public String storeFile(MultipartFile file, String fileName) throws IOException {
+        try {
+            System.out.println("uploadDir: " + uploadDir);
+            // 確保目錄存在
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            System.out.println("uploadPath: " + uploadPath);
 
-        // 創建目標路徑
-        Path targetLocation = Paths.get(uploadDir).resolve(fileName);
+            // 清理文件名
+            fileName = StringUtils.cleanPath(fileName);
 
-        // 保存文件
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            // 檢查文件名是否包含非法字符
+            if (fileName.contains("..")) {
+                throw new RuntimeException("Invalid file path sequence: " + fileName);
+            }
 
-        return fileName;
+            // 複製文件到目標位置
+            Path targetLocation = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            return fileName;
+        } catch (IOException ex) {
+            log.error("Could not store file " + fileName, ex);
+            throw new IOException("Could not store file " + fileName, ex);
+        }
     }
 
     public void deleteFile(String fileName) {
@@ -42,8 +57,11 @@ public class FileStorageService {
             Path filePath = Paths.get(uploadDir).resolve(fileName);
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            // 記錄錯誤但不拋出異常，因為這是清理操作
             log.error("Error deleting file: " + fileName, e);
         }
+    }
+
+    public String getUploadDir() {
+        return uploadDir;
     }
 }
