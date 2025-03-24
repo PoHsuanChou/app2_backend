@@ -4,33 +4,23 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.example.ChatRoomStatus;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
-import java.util.List;
 
-@Document(collection = "chatRooms")
+@Document(collection = "swipes")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChatRoom {
+public class Swipe {
     @Id
     private String id;
-
-    @DBRef
-    private Match match;
-
-    private List<String> participantIds; // 只存 userId，避免 @DBRef
-
+    private String userId;       // 誰發起的 swipe
+    private String targetUserId; // 被 swipe 的用戶
+    private String action;       // "LIKE" 或 "DISLIKE"
     @Indexed
-    private ChatRoomStatus status;  // 使用枚舉
-
-    @Indexed
-    private Date createdAt;
-    private Date lastMessageAt;
+    private Date timestamp;
 }

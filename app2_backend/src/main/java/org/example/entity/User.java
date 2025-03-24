@@ -43,6 +43,7 @@ public class User implements UserDetails {
     private Date createdAt;
     private boolean isOnline;
     private List<String> roles;  // Roles list
+    private List<String> seenUserIds;  // 存放已經看過的使用者 ID
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // 返回用戶權限列表

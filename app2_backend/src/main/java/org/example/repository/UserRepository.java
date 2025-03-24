@@ -19,5 +19,12 @@ public interface UserRepository extends MongoRepository<User, String> {
     @Query("{ 'profile.gender': ?0 }")
     List<User> findByGender(String gender);
 
+    @Query(value = "{ '_id': ?0 }", fields = "{ 'seenUserIds': 1 }")
+    Optional<User> findSeenUserIdsByUserId(String userId);
+
+    @Query("{ '_id': { $nin: ?0 }, 'id': { $ne: ?1 } }")
+    List<User> findRandomUsersExcluding(List<String> seenUserIds, String userId);
+
+    List<User> findAllByIdNot(String id); // 查找 ID 不等於指定值的用戶
 }
 
