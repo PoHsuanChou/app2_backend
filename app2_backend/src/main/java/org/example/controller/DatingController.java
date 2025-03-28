@@ -24,6 +24,7 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api/dating")
@@ -97,10 +98,10 @@ public class DatingController {
             Optional<Match> reverseMatch = matchRepository.findMatchBetweenUsers(
                     request.getTargetUserId(), request.getUserId());
 
-            if (reverseMatch.isPresent() && "PENDING".equals(reverseMatch.get().getStatus())) {
+            if (reverseMatch.isPresent() && "PENDING".equals(reverseMatch.get().getStatus().name())) {
                 // 匹配成功
                 Match match = reverseMatch.get();
-                match.setStatus(MatchStatus.PENDING);
+                match.setStatus(MatchStatus.ACCEPTED);
                 match.setMatchDate(new Date());
                 matchRepository.save(match);
 
@@ -135,8 +136,13 @@ public class DatingController {
                 : null;
 
         String imageUrl = profile != null && profile.getProfileImage() != null
-                ? backend + profile.getProfileImage()
-                : backend+ "default.jpg"; // 默認圖片
+                ? ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("static/uploads/") // 調整為你的實際圖片路徑
+                .path(profile.getProfileImage())
+                .toUriString()
+                : ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/images/default.jpg")  // 默認圖片的路徑
+                .toUriString();
 
         return DatingUserDTO.builder()
                 .id(user.getId())
@@ -152,5 +158,6 @@ public class DatingController {
         LocalDate now = LocalDate.now();
         return Period.between(birth, now).getYears();
     }
+
 
 }

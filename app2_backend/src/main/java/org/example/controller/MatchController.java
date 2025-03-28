@@ -17,11 +17,9 @@ import org.example.service.MatchService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -58,8 +56,18 @@ public class MatchController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // 取得匹配紀錄
-        List<Match> matches = matchService.getMatchesByUserId(userId);
+        // 取得匹配紀錄，只找已確認的匹配
+        List<Match> matches = matchService.getMatchesByUserId(userId)
+                .stream()
+                .filter(match -> "ACCEPTED".equals(match.getStatus().name()))
+                .collect(Collectors.toList());
+
+        // 如果沒有匹配，直接返回空列表
+        if (matches.isEmpty()) {
+            return ResponseEntity.ok(Collections.singletonList(
+                    new MatchResponse("likes", null, null, 0)
+            ));
+        }
 
         // 取得對方的 userId (過濾掉自己)
         List<String> matchedUserIds = matches.stream()
@@ -88,14 +96,10 @@ public class MatchController {
 
         // 找出已聊天過的用戶ID
         Set<String> usersWithChatHistory = new HashSet<>();
-
         for (ChatRoom chatRoom : chatRooms) {
-            // 只檢查有消息記錄的聊天室
             if (chatRoomIdsWithMessages.contains(chatRoom.getId())) {
                 List<String> participants = chatRoom.getParticipantIds();
-                // 檢查是否只有兩個用戶的聊天室
                 if (participants.size() == 2 && participants.contains(userId)) {
-                    // 添加對方ID到已聊天列表
                     participants.stream()
                             .filter(id -> !id.equals(userId))
                             .findFirst()
@@ -110,17 +114,25 @@ public class MatchController {
         // 建立回應列表
         List<MatchResponse> response = new ArrayList<>();
 
-        // 先加入 "likes" 訊息
-        response.add(new MatchResponse("likes", null, null, Math.max(matches.size() - 1, 0)));
+        // 先加入 "likes" 訊息（這裡可以用匹配數量）
+        response.add(new MatchResponse("likes", null, null, matches.size()));
 
         // 加入匹配對象資訊，排除有聊天記錄的用戶
         for (User user : matchedUsers) {
             if (!usersWithChatHistory.contains(user.getId())) {
                 log.info("發現未聊天的匹配用戶: {}", user.getNickName());
+
+                // 構建完整的頭像URL，與 getCurrentUserProfilePicture 一致
+                String fileName = user.getPicture() != null ? user.getPicture() : "default.png";
+                String pictureUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                        .path("/static/uploads/")
+                        .path(fileName)
+                        .toUriString();
+
                 response.add(new MatchResponse(
                         user.getId(),
                         user.getNickName(),
-                        user.getPicture() != null ? user.getPicture() : "default.png",
+                        pictureUrl,  // 使用完整的URL而不是文件名
                         0
                 ));
             }
