@@ -30,6 +30,8 @@ public class ChatRoom {
     @Indexed
     private ChatRoomStatus status;  // 使用枚舉
 
+    private String startToChat;
+
     @Indexed
     private Date createdAt;
     private Date lastMessageAt;

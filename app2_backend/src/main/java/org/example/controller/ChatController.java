@@ -7,8 +7,10 @@ import org.example.dto.MessageReadRequest;
 import org.example.dto.MessageReadResponse;
 import org.example.dto.chat.MessagePayload;
 import org.example.entity.ChatMessage;
+import org.example.entity.ChatRoom;
 import org.example.entity.Match;
 import org.example.repository.ChatMessageRepository;
+import org.example.repository.ChatRoomRepository;
 import org.example.repository.MatchRepository;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +37,7 @@ public class ChatController {
     private final ChatMessageRepository chatMessageRepository;
     private final RedisTemplate<String, ChatMessage> redisTemplate;
     private final MatchRepository matchRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     @MessageMapping("/private-message")
     public void sendPrivateMessage(@Payload MessagePayload message) {
@@ -54,13 +57,18 @@ public class ChatController {
 
 
         //更新last interactionDate
-        Match match = matchRepository.findByUserIds(message.getSenderId(), message.getReceiverId());
-        if (match != null) {
-            match.setLastInteractionDate(new Date());  // 更新為當前時間
-            matchRepository.save(match);  // 保存更新
+        ChatRoom chatRoom = chatRoomRepository.findChatRoomById(message.getRoomNumber());
+        if (chatRoom != null) {
+            chatRoom.setLastMessageAt(new Date());  // 更新為當前時間
+            chatRoomRepository.save(chatRoom);  // 保存更新
         }
 
-
+        //確定是不是聊過天
+        ChatRoom chatRoomForConvo = chatRoomRepository.findByParticipants(message.getSenderId(),message.getReceiverId());
+        if(chatRoomForConvo.getStartToChat() == null || "N".equals(chatRoomForConvo.getStartToChat())){
+            chatRoomForConvo.setStartToChat("Y");
+            chatRoomRepository.save(chatRoomForConvo);
+        }
 
 
 

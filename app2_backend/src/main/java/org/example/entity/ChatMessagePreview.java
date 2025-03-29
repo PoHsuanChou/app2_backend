@@ -20,5 +20,6 @@ public class ChatMessagePreview {
     private String content;
     private MessageType type;
     private Date timestamp;
+    private String roomNumber;
     private Boolean yourTurn;  // 新增：對應前端 yourTurn
 }

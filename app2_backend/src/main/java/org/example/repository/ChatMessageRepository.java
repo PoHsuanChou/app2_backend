@@ -21,7 +21,7 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     // 查找用戶的所有聊天記錄
     List<ChatMessage> findBySenderIdOrReceiverId(String senderId, String to);
 
-    Optional<ChatMessage> findTopByChatRoomIdOrderByTimestampDesc(String chatRoomId);
+    ChatMessage findTopByChatRoomIdOrderByTimestampDesc(String chatRoomId);
 
     boolean existsBySenderIdOrReceiverId(String senderId, String receiverId);
 
