@@ -45,9 +45,9 @@ public class ChatController {
                 .senderId(message.getSenderId())
                 .receiverId(message.getReceiverId())  // 設定接收者 ID
                 .content(message.getContent())
+                .chatRoomId(message.getRoomNumber())
                 .type(message.getType())  // 確保 MessageType 由客戶端傳入
                 .timestamp(new Date())
-                .chatRoomId(message.getChatRoomId())
                 .build();
 
         chatMessageRepository.save(savedMessage);

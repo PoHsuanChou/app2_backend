@@ -35,5 +35,7 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     @Query(value = "{ $or: [ { 'senderId': ?0 }, { 'receiverId': ?1 } ] }", fields = "{ 'chatRoomId': 1 }")
     Set<String> findDistinctChatRoomIdsBySenderIdOrReceiverId(String senderId, String receiverId);
 
+    List<ChatMessage> findBySenderIdIn(List<String> matchUserIds);
 
+    List<ChatMessage> findByReceiverIdIn(List<String> matchUserIds);
 }

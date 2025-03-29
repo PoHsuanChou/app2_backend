@@ -65,7 +65,7 @@ public class MatchController {
         // 如果沒有匹配，直接返回空列表
         if (matches.isEmpty()) {
             return ResponseEntity.ok(Collections.singletonList(
-                    new MatchResponse("likes", null, null, 0)
+                    new MatchResponse("likes", null, null,null, 0)
             ));
         }
 
@@ -79,27 +79,24 @@ public class MatchController {
         List<ChatRoom> chatRooms = chatRoomRepository.findByParticipantIdsContaining(userId);
 
         // 查詢所有已發送過消息的聊天室ID
-        List<String> chatRoomIdsWithMessages = chatMessageRepository.findBySenderId(userId)
-                .stream()
-                .map(ChatMessage::getChatRoomId)
-                .distinct()
-                .collect(Collectors.toList());
+        // 使用 HashSet 避免重複的聊天室ID
+        Set<String> chatRoomIdsWithMessages = new HashSet<>();
+        List<ChatMessage> s = chatMessageRepository.findBySenderId(userId);
+        List<ChatMessage> g = chatMessageRepository.findByReceiverId(userId);
+// 發送過消息的聊天室
+        chatMessageRepository.findBySenderId(userId)
+                .forEach(msg -> chatRoomIdsWithMessages.add(msg.getChatRoomId()));
 
-        // 也查詢接收過消息的聊天室ID
-        chatRoomIdsWithMessages.addAll(
-                chatMessageRepository.findByReceiverId(userId)
-                        .stream()
-                        .map(ChatMessage::getChatRoomId)
-                        .distinct()
-                        .collect(Collectors.toList())
-        );
+// 接收過消息的聊天室
+        chatMessageRepository.findByReceiverId(userId)
+                .forEach(msg -> chatRoomIdsWithMessages.add(msg.getChatRoomId()));
 
         // 找出已聊天過的用戶ID
         Set<String> usersWithChatHistory = new HashSet<>();
         for (ChatRoom chatRoom : chatRooms) {
             if (chatRoomIdsWithMessages.contains(chatRoom.getId())) {
                 List<String> participants = chatRoom.getParticipantIds();
-                if (participants.size() == 2 && participants.contains(userId)) {
+                if (participants.contains(userId)) {
                     participants.stream()
                             .filter(id -> !id.equals(userId))
                             .findFirst()
@@ -115,7 +112,7 @@ public class MatchController {
         List<MatchResponse> response = new ArrayList<>();
 
         // 先加入 "likes" 訊息（這裡可以用匹配數量）
-        response.add(new MatchResponse("likes", null, null, matches.size()));
+        response.add(new MatchResponse("likes", null, null,null, matches.size()));
 
         // 加入匹配對象資訊，排除有聊天記錄的用戶
         for (User user : matchedUsers) {
@@ -133,6 +130,7 @@ public class MatchController {
                         user.getId(),
                         user.getNickName(),
                         pictureUrl,  // 使用完整的URL而不是文件名
+                        "'",
                         0
                 ));
             }
