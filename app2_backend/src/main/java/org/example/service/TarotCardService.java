@@ -12,6 +12,7 @@ import org.example.repository.DailyTarotDrawRepository;
 import org.example.repository.TarotCardRepository;
 import org.example.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.Date;
 import java.util.List;
@@ -32,14 +33,13 @@ public class TarotCardService {
 
 
 
-    public TarotCardResponse getCardDetails(String userId, Integer cardId) {
+    public TarotCardResponse getCardDetails(String userId) {
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             return null;
         }
 
-        TarotCard card = tarotCardRepository.findByNumber(cardId)
-                .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
+        TarotCard card = getRandomTarotCard();
 
         TarotCardResponse res = TarotCardResponse.builder()
                 .id(card.getId())
@@ -50,36 +50,30 @@ public class TarotCardService {
                 .elementalAffinity(card.getElementalAffinity())
                 .zodiacAffinity(card.getZodiacAffinity())
                 .numerologicalValue(card.getNumerologicalValue())
-                .imageUrl(card.getImageUrl())
+                .imageUrl(ServletUriComponentsBuilder.fromCurrentContextPath()
+                        .path("static/uploads/")
+                        .path(card.getImageUrl())
+                        .toUriString())
                 .description(card.getDescription())
                 .build();
 
-//        // Determine the opposite gender
-//        String oppositeGender = user.getProfile().getGender().equalsIgnoreCase("male") ? "female" : "male";
-//
-//        // Find users of the opposite gender
-//        List<User> oppositeGenderUsers = userRepository.findByGender(oppositeGender);
-//
-//        // Randomly select 5 users
-//        List<String> potentialMatchUserIds = new Random().ints(0, oppositeGenderUsers.size())
-//                .distinct()
-//                .limit(5)
-//                .mapToObj(oppositeGenderUsers::get)
-//                .map(User::getId)
-//                .collect(Collectors.toList());
-//
-//        // Set potential match user IDs in the response
-//
-//        // Create and save the DailyTarotDraw
-//        DailyTarotDraw dailyTarotDraw = new DailyTarotDraw();
-//        dailyTarotDraw.setUserId(userId);
-//        dailyTarotDraw.setCardId(card.getNumber());
-//        dailyTarotDraw.setDate(new Date());
-//        dailyTarotDraw.setCreatedAt(new Date());
-//        dailyTarotDraw.setPotentialMatchUserIds(potentialMatchUserIds);
-//
-//        dailyTarotDrawRepository.save(dailyTarotDraw);
 
         return res;
+    }
+    public TarotCard getRandomTarotCard() {
+        // 獲取所有塔羅牌
+        List<TarotCard> allCards = tarotCardRepository.findAll();
+
+        // 如果資料庫為空，拋出異常
+        if (allCards.isEmpty()) {
+            throw new ResourceNotFoundException("No tarot cards found in the database.");
+        }
+
+        // 使用 Random 隨機選取一張牌
+        Random random = new Random();
+        int randomIndex = random.nextInt(allCards.size());
+
+        // 返回隨機選中的牌
+        return allCards.get(randomIndex);
     }
 }

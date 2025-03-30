@@ -39,7 +39,7 @@ public class TarotCardController {
     })
     public ResponseEntity<TarotCardResponse> getCardDetails(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        TarotCardResponse cardDetails = tarotCardService.getCardDetails(userId,getRandomCardId());
+        TarotCardResponse cardDetails = tarotCardService.getCardDetails(userId);
 
         DailyTarotDraw dailyTarotDraw = new DailyTarotDraw();
         dailyTarotDraw.setUserId(userId);

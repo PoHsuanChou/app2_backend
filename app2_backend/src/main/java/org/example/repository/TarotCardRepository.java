@@ -13,4 +13,8 @@ public interface TarotCardRepository extends MongoRepository<TarotCard, String> 
     List<TarotCard> findByElementalAffinity(String elementalAffinity);
 
     Optional<TarotCard> findByNumber(int number);
+    // 在你的服務或控制器中隨機抽取一張牌
+
+
 }
+

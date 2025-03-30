@@ -2,18 +2,16 @@ package org.example.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.entity.ChatMessage;
-import org.example.entity.ChatMessagePreview;
+import org.example.dto.ChatMessagePreview;
 import org.example.entity.ChatRoom;
 import org.example.entity.User;
 import org.example.repository.ChatMessageRepository;
 import org.example.repository.ChatRoomRepository;
 import org.example.repository.UserRepository;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
