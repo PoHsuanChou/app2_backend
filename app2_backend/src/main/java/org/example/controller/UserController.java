@@ -5,6 +5,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.ApiResponse;
+import org.example.dto.UserProfileResponse;
+import org.example.entity.Profile;
 import org.example.entity.User;
 import org.example.exception.ResourceNotFoundException;
 import org.example.repository.UserRepository;
@@ -18,10 +20,16 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.Date;
 import java.util.UUID;
 
 @RestController
@@ -170,5 +178,63 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse(false, "Could not delete profile picture: " + e.getMessage()));
         }
+    }
+    @GetMapping("/profile/{userId}")
+    public ResponseEntity<?> getUserProfile(@PathVariable String userId) {
+        // 查找用户
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
+
+        // 获取用户个人资料
+        Profile profile = user.getProfile();
+        if (profile == null) {
+            return ResponseEntity.ok(UserProfileResponse.builder()
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .picture(user.getPicture())
+                    .interests(Collections.emptyList())
+                    .about("")
+                    .build());
+        }
+
+        // 构建头像URL
+        String imageUrl = profile.getProfileImage() != null
+                ? ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("static/uploads/")
+                .path(profile.getProfileImage())
+                .toUriString()
+                : user.getPicture() != null
+                ? user.getPicture()
+                : ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/images/default.jpg")
+                .toUriString();
+
+        // 构建响应
+        UserProfileResponse response = UserProfileResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .name(profile.getName())
+                .email(user.getEmail())
+                .picture(imageUrl)
+                .age(profile.getBirthDate() != null ? calculateAge(profile.getBirthDate()) : null)
+                .gender(profile.getGender())
+                .interests(profile.getInterests() != null ? profile.getInterests() : Collections.emptyList())
+                .about(profile.getBio())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    // 计算年龄的辅助方法
+    private Integer calculateAge(Date birthDate) {
+        if (birthDate == null) return null;
+
+        LocalDate birth = birthDate.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalDate now = LocalDate.now();
+
+        return Period.between(birth, now).getYears();
     }
 }
