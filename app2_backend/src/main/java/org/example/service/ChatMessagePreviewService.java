@@ -69,6 +69,7 @@ public class ChatMessagePreviewService {
             ChatMessagePreview preview = ChatMessagePreview.builder()
                     .id(chatRoom.getId())
                     .senderId(otherUserId)
+                    .otherUserId(otherUser.getId())
                     .name(otherUser.getUsername())
                     .image(imageUrl)
                     .content(lastMessage.getContent())

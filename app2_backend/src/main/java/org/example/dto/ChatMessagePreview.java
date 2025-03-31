@@ -15,6 +15,7 @@ import java.util.Date;
 public class ChatMessagePreview {
     private String id;
     private String senderId;
+    private String otherUserId;
     private String name;       // 新增：對應前端 name
     private String image;      // 新增：對應前端 image
     private String content;
