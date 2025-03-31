@@ -64,7 +64,7 @@ public class MatchController {
         List<MatchResponse> responseList = new ArrayList<>();
 
         // Add the first special "likes" entry with count of matches
-        responseList.add(new MatchResponse("likes", null, null, null, Math.max(chatRooms.size() - 1, 0)));
+        responseList.add(new MatchResponse("likes", null, null,null, null, Math.max(chatRooms.size() - 1, 0)));
 
         for (ChatRoom chatRoom : chatRooms) {
             // Find the other participant's ID (not the current user)
@@ -90,6 +90,7 @@ public class MatchController {
                     MatchResponse matchResponse = new MatchResponse(
                             otherUserId,
                             otherUser.getUsername(),
+                            otherUserId,
                             imageUrl,
                             chatRoom.getId(),
                             null // count is null for regular match entries
