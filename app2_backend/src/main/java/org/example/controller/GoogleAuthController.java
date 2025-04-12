@@ -58,4 +58,5 @@ public class GoogleAuthController {
                return new ResponseEntity<>(new GoogleSSOResponse(false, GoogleSSOMessage.INVALID_ID_TOKEN.getMessage(), null, null,false,null), HttpStatus.INTERNAL_SERVER_ERROR);
           }
      }
+
 }
