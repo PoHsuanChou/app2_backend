@@ -36,9 +36,12 @@ FROM openjdk:17-slim
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# Add wait-for-it script to handle database connection delays
+# Install wait-for-it script to handle service dependencies
 ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
+# Expose port
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# Use environment variables for Redis and MongoDB hosts
+ENTRYPOINT ["/wait-for-it.sh", "mongodb:27017", "--", "/wait-for-it.sh", "redis:6379", "--", "java", "-jar", "app.jar"]
