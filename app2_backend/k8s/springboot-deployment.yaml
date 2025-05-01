@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: springboot-app
-          image: your-repo/springboot-app:latest
+          image: paul4017boy/springboot-app:latest
           ports:
             - containerPort: 8080
           env:
@@ -37,4 +37,4 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
-  type: NodePort
+#  type: NodePort

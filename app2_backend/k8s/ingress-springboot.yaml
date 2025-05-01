@@ -1,0 +1,20 @@
+# ingress-springboot.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: springboot-ingress
+  # annotations:
+  #   nginx.ingress.kubernetes.io/rewrite-target: / # 如果你的Spring Boot是根路徑，可能不需要重寫
+spec:
+  rules:
+    - http:
+        paths:
+          # 這個規則表示所有進入 Ingress 的 HTTP 流量 (路徑 / 開頭)
+          # 都會被轉發到 springboot-app Service 的 8080 端口
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: springboot-app # 你的 Spring Boot Service 名稱
+                port:
+                  number: 8080     # 你的 Spring Boot Service 端口

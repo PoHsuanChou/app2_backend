@@ -25,18 +25,19 @@
 
 
 # Build stage
-FROM maven:3.8.4-openjdk-17-slim AS build
+# Build stage
+FROM --platform=linux/amd64 maven:3.8.4-openjdk-17-slim AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Run stage
-FROM openjdk:17-slim
+FROM --platform=linux/amd64 openjdk:17-slim
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# Install wait-for-it script to handle service dependencies
+# Install wait-for-it script
 ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 

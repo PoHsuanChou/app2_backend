@@ -39,4 +39,5 @@ public class HealthCheckController {
         
         return ResponseEntity.ok(response);
     }
-} 
+}
+
