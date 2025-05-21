@@ -201,7 +201,7 @@ public class UserController {
         // 构建头像URL
         String imageUrl = profile.getProfileImage() != null
                 ? ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("static/uploads/")
+                .path("/static/uploads/")
                 .path(profile.getProfileImage())
                 .toUriString()
                 : user.getPicture() != null

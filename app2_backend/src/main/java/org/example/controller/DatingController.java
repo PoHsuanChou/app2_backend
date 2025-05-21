@@ -16,6 +16,7 @@ import org.example.repository.SwipeRepository;
 import org.example.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -46,7 +47,7 @@ public class DatingController {
                     .body(new ApiResponse(false, "User not authenticated"));
         }
 
-        // 查詢當前用戶的性別
+        // Query current user's gender
         User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         String currentUserGender = currentUser.getProfile() != null
@@ -54,72 +55,89 @@ public class DatingController {
                 : null;
 
         if (currentUserGender == null) {
-            // 如果當前用戶沒有設置性別，返回空列表或拋出異常，根據需求決定
             return ResponseEntity.ok(Collections.emptyList());
         }
 
-        // 查詢所有用戶，排除當前用戶
+        // Query all users, excluding current user
         List<User> allUsers = userRepository.findAllByIdNot(userId);
 
-        // 查詢當前用戶已 swipe 的目標用戶
+        // Query swiped users
         List<Swipe> swipes = swipeRepository.findByUserId(userId);
         Set<String> swipedUserIds = swipes.stream()
                 .map(Swipe::getTargetUserId)
                 .collect(Collectors.toSet());
 
-        // 過濾異性用戶並轉換為 DTO
+        // Query matched users (ACCEPTED matches)
+        List<Match> matches = matchRepository.findMatchesByUserId(userId);
+        Set<String> matchedUserIds = matches.stream()
+                .filter(match -> match.getStatus() == MatchStatus.ACCEPTED)
+                .map(match -> match.getUser1Id().equals(userId) ? match.getUser2Id() : match.getUser1Id())
+                .collect(Collectors.toSet());
+
+        // Filter opposite-gender users, excluding swiped and matched users
         List<DatingUserDTO> users = allUsers.stream()
-                .filter(user -> !swipedUserIds.contains(user.getId())) // 排除已 swipe 的用戶
+                .filter(user -> !swipedUserIds.contains(user.getId())) // Exclude swiped users
+                .filter(user -> !matchedUserIds.contains(user.getId())) // Exclude matched users
                 .filter(user -> {
                     String userGender = user.getProfile() != null ? user.getProfile().getGender() : null;
-                    // 過濾異性：如果當前用戶是 MALE，則只保留 FEMALE，反之亦然
                     return userGender != null && !userGender.equals(currentUserGender);
                 })
                 .map(this::convertToDatingUserDTO)
-                .limit(10) // 限制返回數量，例如 10 個
+                .limit(10) // Limit to 10 users
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(users);
     }
 
     @PostMapping("/swipe")
+    @Transactional
     public ResponseEntity<SwipeResponse> handleSwipe(@RequestBody SwipeRequest request) {
-        // 記錄 swipe
+        String userId = request.getUserId();
+        String targetUserId = request.getTargetUserId();
+
+        // Normalize user IDs: smaller ID as user1Id
+        String user1Id = userId.compareTo(targetUserId) < 0 ? userId : targetUserId;
+        String user2Id = userId.compareTo(targetUserId) < 0 ? targetUserId : userId;
+
+        // Record swipe
         Swipe swipe = Swipe.builder()
-                .userId(request.getUserId())
-                .targetUserId(request.getTargetUserId())
+                .userId(userId)
+                .targetUserId(targetUserId)
                 .action(request.getAction())
                 .timestamp(new Date())
                 .build();
         swipeRepository.save(swipe);
 
         if ("LIKE".equals(request.getAction())) {
-            // 檢查是否雙向匹配
-            Optional<Match> reverseMatch = matchRepository.findMatchBetweenUsers(
-                    request.getTargetUserId(), request.getUserId());
+            // Check for existing match with normalized IDs
+            Optional<Match> existingMatch = matchRepository.findMatchByUserPair(user1Id, user2Id);
 
-            if (reverseMatch.isPresent() && "PENDING".equals(reverseMatch.get().getStatus().name())) {
-                // 匹配成功
-                Match match = reverseMatch.get();
-                match.setStatus(MatchStatus.ACCEPTED);
-                match.setMatchDate(new Date());
-                matchRepository.save(match);
+            if (existingMatch.isPresent()) {
+                Match match = existingMatch.get();
+                if ("PENDING".equals(match.getStatus().name())) {
+                    // Match successful (reverse LIKE found)
+                    match.setStatus(MatchStatus.ACCEPTED);
+                    match.setMatchDate(new Date());
+                    matchRepository.save(match);
 
-                // 創建聊天室
-                ChatRoom chatRoom = ChatRoom.builder()
-                        .match(match)
-                        .participantIds(Arrays.asList(request.getUserId(), request.getTargetUserId()))
-                        .status(ChatRoomStatus.ACTIVE)
-                        .createdAt(new Date())
-                        .build();
-                chatRoomRepository.save(chatRoom);
+                    // Create chat room
+                    ChatRoom chatRoom = ChatRoom.builder()
+                            .match(match)
+                            .participantIds(Arrays.asList(userId, targetUserId))
+                            .status(ChatRoomStatus.ACTIVE)
+                            .createdAt(new Date())
+                            .build();
+                    chatRoomRepository.save(chatRoom);
 
-                return ResponseEntity.ok(new SwipeResponse(true, true, chatRoom.getId()));
+                    return ResponseEntity.ok(new SwipeResponse(true, true, chatRoom.getId()));
+                }
+                // If match is already ACCEPTED or otherwise, no action needed
+                return ResponseEntity.ok(new SwipeResponse(true, false, null));
             } else {
-                // 單向 LIKE，創建 PENDING 匹配
+                // Create new PENDING match with normalized IDs
                 Match match = Match.builder()
-                        .user1Id(request.getUserId())
-                        .user2Id(request.getTargetUserId())
+                        .user1Id(user1Id)
+                        .user2Id(user2Id)
                         .status(MatchStatus.PENDING)
                         .matchDate(new Date())
                         .build();

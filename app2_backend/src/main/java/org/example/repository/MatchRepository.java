@@ -25,4 +25,7 @@ public interface MatchRepository extends MongoRepository<Match, String> {
     Optional<Match> findMatchBetweenUsers(String user1Id, String user2Id);
     // 可選：檢查某個用戶的所有 PENDING 匹配
     List<Match> findByUser1IdAndStatus(String user1Id, MatchStatus status);
+
+    @Query("{ user1Id: ?0, user2Id: ?1 }")
+    Optional<Match> findMatchByUserPair(String user1Id, String user2Id);
 }

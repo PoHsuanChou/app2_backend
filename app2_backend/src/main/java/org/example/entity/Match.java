@@ -20,6 +20,7 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 @CompoundIndex(def = "{'user1Id': 1, 'user2Id': 1}", unique = true)
+@CompoundIndex(name = "user_pair_idx", def = "{'user1Id': 1, 'user2Id': 1}", unique = true)
 public class Match {
     @Id
     private String id;
